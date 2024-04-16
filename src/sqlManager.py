@@ -6,10 +6,12 @@ class SQLManager:
 
     # TODO create different table for collectives
     def __init__(self, host_name, user_name, user_password, db_name):
+        self._create_db_connection(host_name, user_name, user_password, db_name)
+        
         self.create_users_table()
+        self.create_questions_table()
+        self.create_answers_table()
 
-    # TODO add collectives 
-    # https://teamtreehouse.com/community/sql-for-multiple-values-in-a-cell
     def create_users_table(self):
         query = """
         CREATE TABLE IF NOT EXISTS users (
@@ -17,7 +19,7 @@ class SQLManager:
             user_id INT UNIQUE NOT NULL,
             user_type VARCHAR(20),
             age INT,
-            location VARCHAR(255),
+            location VARCHAR(255),  
             is_employee BOOL,
             display_name VARCHAR(255),
             accept_rate INT,
@@ -31,15 +33,14 @@ class SQLManager:
             creation_date INT,
             last_access_date INT,
             last_modified_date INT,
-            timed_penalty_date INT
+            timed_penalty_date INT,
+            collectives TEXT
         );
         """
 
         logging.info("Initializing users table.")
         self._execute_write_query(query)
 
-    # TODO collectives, collective recommendatinos
-    # TODO ADD question_id as a foreign key
     def create_answers_table(self):
         query = """
         CREATE TABLE IF NOT EXISTS answers (
@@ -51,7 +52,7 @@ class SQLManager:
             comment_count INT,
             up_vote_count INT,
             down_vote_count INT,
-            upvoted BOOL
+            upvoted BOOL,
             downvoted BOOL,
             score INT,
             accepted BOOL,
@@ -59,17 +60,19 @@ class SQLManager:
             creation_date INT,
             locked_date INT,
             community_owned_date INT,
+            collectives TEXT,
 
-            CONSTRAINT fk_users_questions
-            FOREIGN KEY (owner) REFERENCES users(account_id) ON DELETE CASCADE
+            CONSTRAINT fk_answers_questions
+            FOREIGN KEY (question_id) REFERENCES questions(question_id) ON DELETE CASCADE
         );
         """
+        logging.info("Initializing answers table.")
+        self._execute_write_query(query)
     
-    # TODO add collectives
     def create_questions_table(self):
         query = """
-        CREATE TABLE IF NOT EXISTS
-            question_id INT,
+        CREATE TABLE IF NOT EXISTS questions (
+            question_id INT PRIMARY KEY,
             accepted_answer_id INT,
             title TEXT,
             view_count INT,
@@ -98,31 +101,13 @@ class SQLManager:
             last_activity_date INT,
             last_edit_date INT,
             locked_date INT,
-            protected_date INT
+            protected_date INT,
+            collectives TEXT
+        );  
         """
 
-    # TODO implement once question table exists
-    def create_collectives_tables(self):
-        query_0 = """
-        CREATE TABLE IF NOT EXISTS
-            slug INT PRIMARY KEY,
-            name VARCHAR(40),
-            description TEXT,
-        """
-
-        query_1 = """
-        CREATE TABLE IF NOT EXISTS
-            collective_id INT,
-            question_id,
-            answer_id,
-            author_id
-        """
-        
-
-        logging.info("Initializing collectives table.")
-        self._execute_write_query(query_0)
-        self._execute_write_query(query_1)
-
+        logging.info("Initializing questions table.")
+        self._execute_write_query(query)
 
     def _create_db_connection(self, host_name, user_name, user_password, db_name):  
         self.connection = None
@@ -155,3 +140,5 @@ class SQLManager:
             
         except Error as err:
             logging.error(f"Error when excuting query {query} : {err}.")
+
+x = SQLManager("localhost", "root" ,"password", "stackexchange")
