@@ -7,7 +7,9 @@ logging.basicConfig(
     filename="basic.log",
     force=True
 )
+from src import authenticate, sqlManager, apiCall
 
-from src import authenticate
+obj0 = authenticate.Authenticate()
+obj1 = apiCall.APIcall(obj0.access_token)
 
-obj = authenticate.Authenticate()
+# obj1 = sqlManager.SQLManager()
