@@ -43,6 +43,7 @@ class SQLManager:
         logging.info("Initializing users table.")
         self._execute_write_query(query)
 
+    # filter: !)E-ko157Q3L6uLnKttPbTnIxVK9xpMlC)7tq69oEWVe1FOEmL
     def create_answers_table(self):
         query = """
         CREATE TABLE IF NOT EXISTS answers (
@@ -62,10 +63,7 @@ class SQLManager:
             creation_date INT,
             locked_date INT,
             community_owned_date INT,
-            collectives TEXT,
-
-            CONSTRAINT fk_answers_questions
-            FOREIGN KEY (question_id) REFERENCES questions(question_id) ON DELETE CASCADE
+            collectives TEXT
         );
         """
         logging.info("Initializing answers table.")
@@ -76,6 +74,7 @@ class SQLManager:
         CREATE TABLE IF NOT EXISTS questions (
             question_id INT PRIMARY KEY,
             accepted_answer_id INT,
+            owner INT,
             title TEXT,
             view_count INT,
             answer_count INT,
@@ -111,6 +110,234 @@ class SQLManager:
         logging.info("Initializing questions table.")
         self._execute_write_query(query)
 
+    def insert_into_users_table(self, user_file):
+        data_to_insert = {
+            "account_id": user_file.get("account_id", None),
+            "user_id": user_file.get("user_id", None),
+            "user_type": user_file.get("user_type", None),
+            "age": user_file.get("age", None),
+            "location": user_file.get("location", None),
+            "is_employee": user_file.get("is_employee", None),
+            "display_name": user_file.get("display_name", None),
+            "accept_rate": user_file.get("accept_rate", None),
+            "reputation": user_file.get("reputation", None),
+            "view_count": user_file.get("view_count", None),
+            "question_count": user_file.get("question_count", None),
+            "answer_count": user_file.get("answer_count", None),
+            "badge_counts_gold": user_file.get("badge   _counts", {}).get("gold", None),
+            "badge_counts_silver": user_file.get("badge_counts", {}).get("silver", None),
+            "badge_counts_bronze": user_file.get("badge_counts", {}).get("bronze", None),
+            "up_vote_count": user_file.get("up_vote_count", None),
+            "down_vote_count": user_file.get("down_vote_count", None),
+            "creation_date": user_file.get("creation_date", None),
+            "last_access_date": user_file.get("last_access_date", None),
+            "last_modified_date": user_file.get("last_modified_date", None),
+            "timed_penalty_date": user_file.get("timed_penalty_date", None),
+            "collectives": self._collective_to_string(user_file.get("collectives", None)) # CHANGE
+        }
+
+        query = """
+            INSERT INTO users (
+                account_id, user_id, user_type, age, location, is_employee, display_name,
+                accept_rate, reputation, view_count, question_count, answer_count,
+                badge_counts_gold, badge_counts_silver, badge_counts_bronze,
+                up_vote_count, down_vote_count, creation_date, last_access_date,
+                last_modified_date, timed_penalty_date, collectives
+            )
+            VALUES (
+                %(account_id)s, %(user_id)s, %(user_type)s, %(age)s, %(location)s,
+                %(is_employee)s, %(display_name)s, %(accept_rate)s, %(reputation)s,
+                %(view_count)s, %(question_count)s, %(answer_count)s,
+                %(badge_counts_gold)s, %(badge_counts_silver)s, %(badge_counts_bronze)s,
+                %(up_vote_count)s, %(down_vote_count)s, %(creation_date)s,
+                %(last_access_date)s, %(last_modified_date)s, %(timed_penalty_date)s,
+                %(collectives)s
+            )
+            ON DUPLICATE KEY UPDATE
+                account_id = VALUES(account_id),
+                user_id = VALUES(user_id),
+                user_type = VALUES(user_type),
+                age = VALUES(age),
+                location = VALUES(location),
+                is_employee = VALUES(is_employee),
+                display_name = VALUES(display_name),
+                accept_rate = VALUES(accept_rate),
+                reputation = VALUES(reputation),
+                view_count = VALUES(view_count),
+                question_count = VALUES(question_count),
+                answer_count = VALUES(answer_count),
+                badge_counts_gold = VALUES(badge_counts_gold),
+                badge_counts_silver = VALUES(badge_counts_silver),
+                badge_counts_bronze = VALUES(badge_counts_bronze),
+                up_vote_count = VALUES(up_vote_count),
+                down_vote_count = VALUES(down_vote_count),
+                creation_date = VALUES(creation_date),
+                last_access_date = VALUES(last_access_date),
+                last_modified_date = VALUES(last_modified_date),
+                timed_penalty_date = VALUES(timed_penalty_date),
+                collectives = VALUES(collectives);
+        """
+
+        self._execute_write_query(query, data_to_insert)
+
+    # TODO add, whether accepted
+    def insert_into_questions_table(self, question_file):
+        data_to_insert = {
+            "question_id": question_file.get("question_id", None),
+            "accepted_answer_id": question_file.get("accepted_answer_id", None),
+            "owner": question_file.get("owner", {}).get("user_id", None),
+            "title": question_file.get("title", None),
+            "view_count": question_file.get("view_count", None),
+            "answer_count": question_file.get("answer_count", None),
+            "comment_count": question_file.get("comment_count", None),
+            "close_vote_count": question_file.get("close_vote_count", None),
+            "delete_vote_count": question_file.get("delete_vote_count", None),
+            "up_vote_count": question_file.get("up_vote_count", None),
+            "down_vote_count": question_file.get("down_vote_count", None),
+            "downvoted": question_file.get("downvoted", None),
+            "upvoted": question_file.get("upvoted", None),
+            "favorite_count": question_file.get("favorite_count", None),
+            "reopen_vote_count": question_file.get("reopen_vote_count", None),
+            "score": question_file.get("score", None),
+            "favorited": question_file.get("favorited", None),
+            "is_answered": question_file.get("is_answered", None),
+            "closed_reason": question_file.get("closed_reason", None),
+            "body_markdown": question_file.get("body_markdown", None),
+            "migrated_from": question_file.get("migrated_from", None),
+            "migrated_to": question_file.get("migrated_to", None),
+            "bounty_amount": question_file.get("bounty_amount", None),
+            "bounty_closes_date": question_file.get("bounty_closes_date", None),
+            "community_owned_date": question_file.get("community_owned_date", None),
+            "creation_date": question_file.get("creation_date", None),
+            "closed_date": question_file.get("closed_date", None),
+            "last_activity_date": question_file.get("last_activity_date", None),
+            "last_edit_date": question_file.get("last_edit_date", None),
+            "locked_date": question_file.get("locked_date", None),
+            "protected_date": question_file.get("protected_date", None),
+            "collectives": self._collective_to_string(question_file.get("collectives", None))
+        }
+
+        query = """
+            INSERT INTO questions (
+                question_id, accepted_answer_id, owner, title, view_count, answer_count,
+                comment_count, close_vote_count, delete_vote_count, up_vote_count,
+                down_vote_count, downvoted, upvoted, favorite_count, reopen_vote_count,
+                score, favorited, is_answered, closed_reason, body_markdown,
+                migrated_from, migrated_to, bounty_amount, bounty_closes_date,
+                community_owned_date, creation_date, closed_date, last_activity_date,
+                last_edit_date, locked_date, protected_date, collectives
+            )
+            VALUES (
+                %(question_id)s, %(accepted_answer_id)s, %(owner)s, %(title)s, %(view_count)s,
+                %(answer_count)s, %(comment_count)s, %(close_vote_count)s,
+                %(delete_vote_count)s, %(up_vote_count)s, %(down_vote_count)s,
+                %(downvoted)s, %(upvoted)s, %(favorite_count)s, %(reopen_vote_count)s,
+                %(score)s, %(favorited)s, %(is_answered)s, %(closed_reason)s,
+                %(body_markdown)s, %(migrated_from)s, %(migrated_to)s,
+                %(bounty_amount)s, %(bounty_closes_date)s, %(community_owned_date)s,
+                %(creation_date)s, %(closed_date)s, %(last_activity_date)s,
+                %(last_edit_date)s, %(locked_date)s, %(protected_date)s, %(collectives)s
+            )
+            ON DUPLICATE KEY UPDATE
+                question_id = VALUES(question_id),
+                accepted_answer_id = VALUES(accepted_answer_id),
+                owner = VALUES(owner),
+                title = VALUES(title),
+                view_count = VALUES(view_count),
+                answer_count = VALUES(answer_count),
+                comment_count = VALUES(comment_count),
+                close_vote_count = VALUES(close_vote_count),
+                delete_vote_count = VALUES(delete_vote_count),
+                up_vote_count = VALUES(up_vote_count),
+                down_vote_count = VALUES(down_vote_count),
+                downvoted = VALUES(downvoted),
+                upvoted = VALUES(upvoted),
+                favorite_count = VALUES(favorite_count),
+                reopen_vote_count = VALUES(reopen_vote_count),
+                score = VALUES(score),
+                favorited = VALUES(favorited),
+                is_answered = VALUES(is_answered),
+                closed_reason = VALUES(closed_reason),
+                body_markdown = VALUES(body_markdown),
+                migrated_from = VALUES(migrated_from),
+                migrated_to = VALUES(migrated_to),
+                bounty_amount = VALUES(bounty_amount),
+                bounty_closes_date = VALUES(bounty_closes_date),
+                community_owned_date = VALUES(community_owned_date),
+                creation_date = VALUES(creation_date),
+                closed_date = VALUES(closed_date),
+                last_activity_date = VALUES(last_activity_date),
+                last_edit_date = VALUES(last_edit_date),
+                locked_date = VALUES(locked_date),
+                protected_date = VALUES(protected_date),
+                collectives = VALUES(collectives);
+        """
+        
+        self._execute_write_query(query, data_to_insert)
+    
+    def insert_into_answers_table(self, answer_file):
+        data_to_insert = {
+            "answer_id": answer_file.get("answer_id", None),
+            "owner": answer_file.get("owner", {}).get("user_id", None),
+            "question_id": answer_file.get("question_id", None),
+            "body_markdown": answer_file.get("body_markdown", None),
+            "awarded_bounty_amount": answer_file.get("awarded_bounty_amount", None),
+            "comment_count": answer_file.get("comment_count", None),
+            "up_vote_count": answer_file.get("up_vote_count", None),
+            "down_vote_count": answer_file.get("down_vote_count", None),
+            "upvoted": answer_file.get("upvoted", None),
+            "downvoted": answer_file.get("downvoted", None),
+            "score": answer_file.get("score", None),
+            "accepted": answer_file.get("accepted", None),
+            "is_accepted": answer_file.get("is_accepted", None),
+            "creation_date": answer_file.get("creation_date", None),
+            "locked_date": answer_file.get("locked_date", None),
+            "community_owned_date": answer_file.get("community_owned_date", None),
+            "collectives": self._collective_to_string(answer_file.get("collectives", None))
+        }
+
+        query = """
+            INSERT INTO answers (
+                answer_id, owner, question_id, body_markdown, awarded_bounty_amount,
+                comment_count, up_vote_count, down_vote_count, upvoted, downvoted, score,
+                accepted, is_accepted, creation_date, locked_date, community_owned_date,
+                collectives
+            )
+            VALUES (
+                %(answer_id)s, %(owner)s, %(question_id)s, %(body_markdown)s,
+                %(awarded_bounty_amount)s, %(comment_count)s, %(up_vote_count)s,
+                %(down_vote_count)s, %(upvoted)s, %(downvoted)s, %(score)s, %(accepted)s,
+                %(is_accepted)s, %(creation_date)s, %(locked_date)s,
+                %(community_owned_date)s, %(collectives)s
+            )
+            ON DUPLICATE KEY UPDATE
+                answer_id = VALUES(answer_id),
+                owner = VALUES(owner),
+                question_id = VALUES(question_id),
+                body_markdown = VALUES(body_markdown),
+                awarded_bounty_amount = VALUES(awarded_bounty_amount),
+                comment_count = VALUES(comment_count),
+                up_vote_count = VALUES(up_vote_count),
+                down_vote_count = VALUES(down_vote_count),
+                upvoted = VALUES(upvoted),
+                downvoted = VALUES(downvoted),
+                score = VALUES(score),
+                accepted = VALUES(accepted),
+                is_accepted = VALUES(is_accepted),
+                creation_date = VALUES(creation_date),
+                locked_date = VALUES(locked_date),
+                community_owned_date = VALUES(community_owned_date),
+                collectives = VALUES(collectives);
+        """
+
+        self._execute_write_query(query, data_to_insert)
+
+    def get_inserted_users(self):
+        query = "SELECT user_id FROM users"
+        res = self._execute_read_query(query)
+        
+        return [i[0] for i in res]
+
     def _create_db_connection(self, host_name, user_name, user_password, db_name):  
         self.connection = None
         try:
@@ -142,5 +369,15 @@ class SQLManager:
             
         except Error as err:
             logging.error(f"Error when excuting query {query} : {err}.")
+
+    # TODO test function
+    def _collective_to_string(self, cvs):
+        if not cvs: return None
+
+        cv_names = []
+        for cv in cvs:
+            cv_names.append(cv.get("collective", {}).get("name", ""))
+        
+        return ",".join(cv_names)
 
 x = SQLManager("localhost", "root" ,"password", "stackexchange")
