@@ -8,13 +8,14 @@ class SQLManager:
     def __init__(self, host_name, user_name, user_password, db_name):
         self._create_db_connection(host_name, user_name, user_password, db_name)
         
-        self.create_users_table()
+        self.create_users_table(user_table_name="users_control")
+        self.create_users_table(user_table_name="users_treatment")
         self.create_questions_table()
         self.create_answers_table()
 
-    def create_users_table(self):
+    def create_users_table(self, user_table_name):
         query = """
-        CREATE TABLE IF NOT EXISTS users (
+        CREATE TABLE IF NOT EXISTS {user_table_name} (
             account_id INT PRIMARY KEY,
             user_id INT UNIQUE NOT NULL,
             user_type VARCHAR(20),
@@ -38,9 +39,9 @@ class SQLManager:
             timed_penalty_date INT,
             collectives TEXT
         );
-        """
+        """.format(user_table_name=user_table_name)
 
-        logging.info("Initializing users table.")
+        logging.info(f"Initializing {user_table_name} table.")
         self._execute_write_query(query)
 
     # filter: !)E-ko157Q3L6uLnKttPbTnIxVK9xpMlC)7tq69oEWVe1FOEmL
@@ -111,6 +112,13 @@ class SQLManager:
         self._execute_write_query(query)
 
     def insert_into_users_table(self, user_file):
+        if not user_file.get("location"): return
+        
+        user_table_name = self._determine_user_table_name(user_file["location"])
+        if self.get_users_table_count(user_table_name) > 1000: 
+            logging.info(f"1000 entries for {user_table_name} reached.")
+            return   
+        
         data_to_insert = {
             "account_id": user_file.get("account_id", None),
             "user_id": user_file.get("user_id", None),
@@ -137,7 +145,7 @@ class SQLManager:
         }
 
         query = """
-            INSERT INTO users (
+            INSERT INTO {user_table_name} (
                 account_id, user_id, user_type, age, location, is_employee, display_name,
                 accept_rate, reputation, view_count, question_count, answer_count,
                 badge_counts_gold, badge_counts_silver, badge_counts_bronze,
@@ -176,8 +184,9 @@ class SQLManager:
                 last_modified_date = VALUES(last_modified_date),
                 timed_penalty_date = VALUES(timed_penalty_date),
                 collectives = VALUES(collectives);
-        """
+        """.format(user_table_name=user_table_name)
 
+        logging.info(f"Inserting into {user_table_name} table account {user_file.get('account_id')}.")
         self._execute_write_query(query, data_to_insert)
 
     # TODO add, whether accepted
@@ -203,8 +212,8 @@ class SQLManager:
             "is_answered": question_file.get("is_answered", None),
             "closed_reason": question_file.get("closed_reason", None),
             "body_markdown": question_file.get("body_markdown", None),
-            "migrated_from": question_file.get("migrated_from", None),
-            "migrated_to": question_file.get("migrated_to", None),
+            "migrated_from": question_file.get("migrated_from", {}).get("other_site", None),
+            "migrated_to": question_file.get("migrated_to", None).get("other_site", None),
             "bounty_amount": question_file.get("bounty_amount", None),
             "bounty_closes_date": question_file.get("bounty_closes_date", None),
             "community_owned_date": question_file.get("community_owned_date", None),
@@ -273,8 +282,9 @@ class SQLManager:
                 collectives = VALUES(collectives);
         """
         
+        logging.info(f"Inserting into questions table.")
         self._execute_write_query(query, data_to_insert)
-    
+        
     def insert_into_answers_table(self, answer_file):
         data_to_insert = {
             "answer_id": answer_file.get("answer_id", None),
@@ -329,14 +339,30 @@ class SQLManager:
                 community_owned_date = VALUES(community_owned_date),
                 collectives = VALUES(collectives);
         """
-
+        logging.info(f"Inserting into answers table.")
         self._execute_write_query(query, data_to_insert)
 
-    def get_inserted_users(self):
-        query = "SELECT user_id FROM users"
+    def get_inserted_users(self, user_table_name):
+        query = "SELECT user_id FROM {user_table_name}".format(user_table_name=user_table_name)
         res = self._execute_read_query(query)
         
         return [i[0] for i in res]
+    
+    def get_users_table_count(self, user_table_name):
+        query = f"""SELECT COUNT(*) FROM {user_table_name}"""
+        res = self._execute_read_query(query)
+
+        return res[0][0]
+    
+    def _determine_user_table_name(self, input_string):
+        countries_of_interest = ["russia", "venezuela", "china"]
+        input_string_lower = input_string.lower()  # Convert to lowercase for case-insensitive comparison
+        
+        if any(country in input_string_lower for country in countries_of_interest):
+            return "users_treatment"
+        else:
+            return "users_control"
+
 
     def _create_db_connection(self, host_name, user_name, user_password, db_name):  
         self.connection = None

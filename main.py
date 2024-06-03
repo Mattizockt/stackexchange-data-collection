@@ -11,5 +11,3 @@ from src import authenticate, apiCall
 
 obj0 = authenticate.Authenticate()
 obj1 = apiCall.APIcall(obj0.access_token)
-
-# obj1 = sqlManager.SQLManager()

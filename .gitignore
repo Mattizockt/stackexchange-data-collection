@@ -1,3 +1,5 @@
 .env
 *.log
 airesearch.code-workspace
+*.txt
+/src/__pycache__
